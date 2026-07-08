@@ -1,0 +1,17 @@
+{
+  "name": "claritydoc-ai",
+  "version": "1.0.0",
+  "description": "Premium Agentic Document Analyzer Chatbot",
+  "scripts": {
+    "install-frontend": "cd frontend && npm install",
+    "build-frontend": "cd frontend && npm run build",
+    "install-backend": "pip install -r backend/requirements.txt",
+    "build-all": "npm run install-frontend && npm run build-frontend && npm run install-backend",
+    "start-backend": "python -m uvicorn backend.main:app --reload",
+    "start-frontend": "cd frontend && npm run dev",
+    "dev-all": "npx concurrently \"npm run start-backend\" \"npm run start-frontend\""
+  },
+  "dependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
