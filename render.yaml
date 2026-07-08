@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: claritydoc-ai
+    env: python
+    buildCommand: "npm run build-all"
+    startCommand: "uvicorn backend.main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+        placeholder: "Enter your Gemini API key (optional, falls back to mock preview)"
