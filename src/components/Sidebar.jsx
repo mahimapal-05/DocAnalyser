@@ -55,7 +55,7 @@ export default function Sidebar({ documents, activeDocId, onSelectDoc, onNewDoc,
       <div className="sidebar-footer">
         <div className="api-badge">
           <div className={`badge-dot ${isOnline ? '' : 'offline'}`}></div>
-          <span>Gemini Agent Engine: {isOnline ? 'Active' : 'Offline Preview'}</span>
+          <span>Groq Agent Engine: {isOnline ? 'Active' : 'Offline Preview'}</span>
         </div>
       </div>
     </aside>

@@ -2,20 +2,19 @@ import os
 import json
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
-from google import genai
-from google.genai import types
+from groq import Groq
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
 
-# Initialize Gemini Client if API key is present
-def get_gemini_client():
-    api_key = os.getenv("GEMINI_API_KEY")
+# Initialize Groq Client if API key is present
+def get_groq_client():
+    api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
         return None
     try:
-        return genai.Client(api_key=api_key)
+        return Groq(api_key=api_key)
     except Exception:
         return None
 
@@ -77,7 +76,7 @@ def get_fallback_profile(filename: str, text: str) -> Dict[str, Any]:
     return {
         "title": filename.rsplit('.', 1)[0].replace('_', ' ').replace('-', ' ').title(),
         "category": category,
-        "summary": "This is a placeholder summary generated locally. To see the full agentic analysis, please configure your GEMINI_API_KEY in the backend.",
+        "summary": "This is a placeholder summary generated locally. To see the full agentic analysis, please configure your GROQ_API_KEY in the backend.",
         "complexity": "Moderate",
         "estimated_reading_time": est_reading,
         "key_entities": [
@@ -87,13 +86,13 @@ def get_fallback_profile(filename: str, text: str) -> Dict[str, Any]:
             "parties": ["Unknown Parties"],
             "risk_level": "Medium",
             "key_clauses": ["N/A"],
-            "red_flags": ["Missing GEMINI_API_KEY configuration"]
+            "red_flags": ["Missing GROQ_API_KEY configuration"]
         } if category == "legal" else None,
         "medical_meta": {
             "patient_info": "Unknown Patient",
             "key_findings": ["Failed to extract clinical insights (API key missing)"],
             "prescriptions": [],
-            "critical_warnings": ["Please configure your GEMINI_API_KEY in backend/.env"]
+            "critical_warnings": ["Please configure your GROQ_API_KEY in backend/.env"]
         } if category == "medical" else None,
         "educational_meta": {
             "subject": "General",
@@ -104,11 +103,11 @@ def get_fallback_profile(filename: str, text: str) -> Dict[str, Any]:
                     "question": "What is required to unlock full AI Agent capabilities in this app?",
                     "options": [
                         "Nothing, it is already fully functional",
-                        "Setting GEMINI_API_KEY in the environment or backend/.env file",
+                        "Setting GROQ_API_KEY in the environment or backend/.env file",
                         "A subscription payment",
                         "Restarting the computer"
                     ],
-                    "correct_answer": "Setting GEMINI_API_KEY in the environment or backend/.env file"
+                    "correct_answer": "Setting GROQ_API_KEY in the environment or backend/.env file"
                 }
             ]
         } if category == "educational" else None
@@ -119,7 +118,7 @@ def analyze_document_profile(filename: str, doc_text: str) -> Dict[str, Any]:
     Analyzes document using Router/Profiler Agent.
     Categorizes, summarizes, and extracts domain-specific metadata.
     """
-    client = get_gemini_client()
+    client = get_groq_client()
     if not client:
         return get_fallback_profile(filename, doc_text)
         
@@ -149,19 +148,32 @@ def analyze_document_profile(filename: str, doc_text: str) -> Dict[str, Any]:
        - If legal, extract the parties, assess overall Risk Level (Low/Medium/High), extract 3-5 key clause themes, and list any potential 'red flags' (e.g., hidden liabilities, strict termination, auto-renewal).
        - If medical, extract patient information, key medical findings/lab results, prescriptions, and any critical health warnings.
        - If educational, determine the subject, list core concepts, learning outcomes, and generate 3 multiple-choice study quiz questions.
+
+    YOU MUST RETURN A JSON OBJECT matching the following JSON schema format:
+    {{
+        "title": "Document Title",
+        "category": "medical | legal | educational | general",
+        "summary": "3-4 sentence summary of the document",
+        "complexity": "Simple | Moderate | Complex",
+        "estimated_reading_time": 5,
+        "key_entities": [
+            {{"name": "Entity Name", "description": "layman explanation"}}
+        ],
+        "legal_meta": null, // or object with {{"parties": [], "risk_level": "Low", "key_clauses": [], "red_flags": []}}
+        "medical_meta": null, // or object with {{"patient_info": "", "key_findings": [], "prescriptions": [], "critical_warnings": []}}
+        "educational_meta": null // or object with {{"subject": "", "core_concepts": [], "learning_outcomes": [], "quiz_questions": [{{"question": "", "options": ["", "", "", ""], "correct_answer": ""}}]}}
+    }}
+    Ensure that you only populate the category metadata matching the classified category (set the other metadata blocks to null).
     """
     
     try:
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                response_schema=DocumentProfile,
-                temperature=0.2
-            )
+        response = client.chat.completions.create(
+            model='llama-3.3-70b-versatile',
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"},
+            temperature=0.2
         )
-        profile_json = json.loads(response.text)
+        profile_json = json.loads(response.choices[0].message.content)
         return profile_json
     except Exception as e:
         print(f"Error in analyze_document_profile: {e}")
@@ -177,13 +189,13 @@ def answer_document_query(
     Orchestrates the conversation with domain-specific agent directives.
     Returns the agent's response and a breakdown of their thought process.
     """
-    client = get_gemini_client()
+    client = get_groq_client()
     if not client:
         return {
-            "answer": "I'm in offline preview mode because no `GEMINI_API_KEY` was found. Please add a valid API key to backend/.env or server environment to enable active conversations.",
+            "answer": "I'm in offline preview mode because no `GROQ_API_KEY` was found. Please add a valid API key to backend/.env or server environment to enable active conversations.",
             "thought_process": [
                 "🔍 Received user query",
-                "⚠️ Checked GEMINI_API_KEY configuration",
+                "⚠️ Checked GROQ_API_KEY configuration",
                 "❌ API Key not found",
                 "🔄 Responded with offline alert"
             ]
@@ -238,46 +250,38 @@ def answer_document_query(
         """
         thoughts.append("🤖 Invoking General Analysis Agent for document response")
 
-    # Construct the contents structure with document context and history
-    contents = []
+    messages = []
     
+    # Add system instructions
+    if system_instruction:
+        messages.append({"role": "system", "content": system_instruction.strip()})
+        
     # Append the Document Context
-    contents.append(types.Content(
-        role="user",
-        parts=[types.Part.from_text(
-            text=f"Here is the document context we are discussing:\n\n=== DOCUMENT CONTENT ===\n{doc_text[:30000]}\n=== END OF DOCUMENT ===\n\nPlease use this context to answer my questions."
-        )]
-    ))
+    messages.append({
+        "role": "user",
+        "content": f"Here is the document context we are discussing:\n\n=== DOCUMENT CONTENT ===\n{doc_text[:30000]}\n=== END OF DOCUMENT ===\n\nPlease use this context to answer my questions."
+    })
     
     # Append conversation history
     for msg in chat_history:
-        role = "user" if msg["role"] == "user" else "model"
-        contents.append(types.Content(
-            role=role,
-            parts=[types.Part.from_text(text=msg["content"])]
-        ))
+        role = "user" if msg["role"] == "user" else "assistant"
+        messages.append({"role": role, "content": msg["content"]})
         
     # Append current user query
-    contents.append(types.Content(
-        role="user",
-        parts=[types.Part.from_text(text=user_query)]
-    ))
+    messages.append({"role": "user", "content": user_query})
     
     thoughts.append("📝 Formulating response context and matching history")
-    thoughts.append("⚡ Sending request to Gemini LLM Engine...")
+    thoughts.append("⚡ Sending request to Groq LLM Engine...")
     
     try:
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=contents,
-            config=types.GenerateContentConfig(
-                system_instruction=system_instruction,
-                temperature=0.4
-            )
+        response = client.chat.completions.create(
+            model='llama-3.3-70b-versatile',
+            messages=messages,
+            temperature=0.4
         )
         thoughts.append("✅ Response successfully compiled and formatted")
         return {
-            "answer": response.text,
+            "answer": response.choices[0].message.content,
             "thought_process": thoughts
         }
     except Exception as e:

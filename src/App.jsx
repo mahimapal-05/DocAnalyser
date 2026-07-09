@@ -14,7 +14,7 @@ export default function App() {
   const [isOnline, setIsOnline] = useState(false);
 
   useEffect(() => {
-    // Check if the backend is running and has the Gemini API Key configured
+    // Check if the backend is running and has the Groq API Key configured
     const checkBackendStatus = async () => {
       try {
         const res = await fetch('/api/health');

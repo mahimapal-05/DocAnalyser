@@ -14,13 +14,13 @@ It is designed to be easily and cheaply deployed on **Render** as a single combi
    - ⚖️ **LexGuard**: Dissects contracts, extracts risk levels, flags unfavorable clauses (e.g. strict auto-renewals, waivers), and highlights key terms.
    - 📚 **EduScribe**: Synthesizes textbook concepts, explains mathematical equations, and builds interactive study quizzes.
 3. **Interactive UI**: ChatGPT-style conversational design featuring frosted-glass elements, neon theme adaptations, and an **Agent thought process logger** showing real-time execution steps.
-4. **Offline Mode / Samples**: Interactive mock documents allow immediate trial and testing even if the `GEMINI_API_KEY` is not configured.
+4. **Offline Mode / Samples**: Interactive mock documents allow immediate trial and testing even if the `GROQ_API_KEY` is not configured.
 
 ---
 
 ## Technology Stack
 
-- **Backend**: FastAPI, Python, Uvicorn, Google GenAI SDK (`gemini-2.5-flash`), `pypdf`, `python-docx`
+- **Backend**: FastAPI, Python, Uvicorn, Groq SDK (`llama-3.3-70b-versatile`), `pypdf`, `python-docx`
 - **Frontend**: React.js, Vite, Premium Vanilla CSS (ChatGPT inspired, fully responsive, glassmorphic layout)
 - **Deployment**: Render Blueprint (`render.yaml`)
 
@@ -40,10 +40,10 @@ It is designed to be easily and cheaply deployed on **Render** as a single combi
    npm install
    ```
 
-2. Configure your Gemini API Key in the backend:
+2. Configure your Groq API Key in the backend:
    Create a `.env` file inside the `backend/` directory:
    ```env
-   GEMINI_API_KEY=your_gemini_api_key_here
+   GROQ_API_KEY=your_groq_api_key_here
    ```
 
 3. Run the development server (runs FastAPI backend on port 8000 and Vite frontend on port 5173 with proxying):
@@ -60,9 +60,12 @@ To deploy on Render:
 
 1. **Push your code to GitHub**.
 2. **Create a new Blueprint Web Service** on Render:
-   - Connect your repository.
-   - Render will read the `render.yaml` specification automatically.
+   - Go to your Render dashboard and click **New > Blueprint**.
+   - Connect your GitHub repository.
+   - Render will detect the `render.yaml` blueprint configuration and list the service `claritydoc-ai`.
 3. **Environment Variable**:
-   - Under the web service settings, add `GEMINI_API_KEY` with your Google Gemini API Key.
+   - Render will prompt you for the environment variables defined in `render.yaml`.
+   - Set the `GROQ_API_KEY` environment variable with your Groq API Key (from the Groq Console).
 4. **Deploy**!
-   Render will install dependencies, compile the React assets, and launch the FastAPI web server. The application is served under a single web service URL.
+   - Render will build the React assets, install the Python backend dependencies, and start the FastAPI server under a single URL.
+   - You can monitor the deployment logs on your Render dashboard.

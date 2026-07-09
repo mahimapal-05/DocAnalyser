@@ -28,9 +28,9 @@ document_cache = {}
 @app.get("/api/health")
 async def health_check():
     """
-    Checks if the Gemini API Key is configured in the environment.
+    Checks if the Groq API Key is configured in the environment.
     """
-    api_key = os.getenv("GEMINI_API_KEY")
+    api_key = os.getenv("GROQ_API_KEY")
     return {
         "status": "healthy",
         "has_key": bool(api_key)
